@@ -8,7 +8,6 @@ export default {
       "Access-Control-Allow-Headers": "Content-Type"
     };
 
-    // Permite requisições de outros domínios
     if (request.method === "OPTIONS") {
       return new Response(null, {
         status: 204,
@@ -16,13 +15,27 @@ export default {
       });
     }
 
-    // ==============================
-    // GIDEON IA
-    // ==============================
+    // TESTE DO ENDPOINT
+    if (url.pathname === "/api/chat" && request.method === "GET") {
+      return new Response(
+        JSON.stringify({
+          status: "online",
+          message: "GIDEON API está funcionando!"
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders
+          }
+        }
+      );
+    }
 
+    // CONVERSA COM A OPENAI
     if (
-      request.method === "POST" &&
-      url.pathname === "/api/chat"
+      url.pathname === "/api/chat" &&
+      request.method === "POST"
     ) {
       try {
         const body = await request.json();
@@ -43,8 +56,6 @@ export default {
           );
         }
 
-        // A chave NÃO fica aqui.
-        // Ela fica protegida nos Secrets do Cloudflare.
         const apiKey = env.OPENAI_API_KEY;
 
         if (!apiKey) {
@@ -62,17 +73,14 @@ export default {
           );
         }
 
-        // Envia a mensagem para a OpenAI
         const openaiResponse = await fetch(
           "https://api.openai.com/v1/responses",
           {
             method: "POST",
-
             headers: {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${apiKey}`
             },
-
             body: JSON.stringify({
               model: "gpt-5.6",
               input: message
@@ -82,13 +90,12 @@ export default {
 
         const data = await openaiResponse.json();
 
-        // Se a OpenAI retornar erro
         if (!openaiResponse.ok) {
           console.error("Erro da OpenAI:", data);
 
           return new Response(
             JSON.stringify({
-              error: "Erro ao conversar com a OpenAI."
+              error: data
             }),
             {
               status: openaiResponse.status,
@@ -100,15 +107,11 @@ export default {
           );
         }
 
-        // Pega a resposta da IA
-        const answer =
-          data.output_text ||
-          "Não consegui gerar uma resposta.";
-
-        // Devolve a resposta para o index.html
         return new Response(
           JSON.stringify({
-            response: answer
+            response:
+              data.output_text ||
+              "Não consegui gerar uma resposta."
           }),
           {
             status: 200,
@@ -120,11 +123,9 @@ export default {
         );
 
       } catch (error) {
-        console.error("Erro no GIDEON:", error);
-
         return new Response(
           JSON.stringify({
-            error: "Erro interno do GIDEON."
+            error: error.message
           }),
           {
             status: 500,
@@ -137,10 +138,7 @@ export default {
       }
     }
 
-    // ==============================
-    // SITE DO GIDEON
-    // ==============================
-
+    // SITE
     return env.ASSETS.fetch(request);
   }
 };
