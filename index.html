@@ -858,20 +858,54 @@ async function sendMessage() {
 
     typing.style.display = "block";
 
-    await new Promise(resolve =>
-        setTimeout(resolve, 500)
-    );
+    try {
 
-    const response =
-        processCommand(command);
+        const response = await fetch(
+            "https://gideon.luizfilm258.workers.dev",
+            {
+                method: "POST",
 
-    typing.style.display = "none";
+                headers: {
+                    "Content-Type": "application/json"
+                },
 
-    addMessage("GIDEON", response);
+                body: JSON.stringify({
+                    message: command
+                })
+            }
+        );
 
-    speak(response);
+        if (!response.ok) {
+            throw new Error("Erro ao conectar com o servidor.");
+        }
+
+        const data = await response.json();
+
+        const answer =
+            data.response ||
+            data.output ||
+            "Não consegui obter uma resposta.";
+
+        typing.style.display = "none";
+
+        addMessage("GIDEON", answer);
+
+        speak(answer);
+
+    } catch (error) {
+
+        typing.style.display = "none";
+
+        console.error(error);
+
+        const errorMessage =
+            "Não consegui me conectar ao meu núcleo de inteligência.";
+
+        addMessage("GIDEON", errorMessage);
+
+        speak(errorMessage);
+    }
 }
-
 
 /* =====================================
    BOTÃO ENVIAR
