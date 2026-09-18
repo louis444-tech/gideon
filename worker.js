@@ -90,6 +90,7 @@ export default {
 
         const data = await openaiResponse.json();
 
+        // Se a OpenAI retornar erro, mostrar o erro real
         if (!openaiResponse.ok) {
           console.error("Erro da OpenAI:", data);
 
@@ -107,11 +108,51 @@ export default {
           );
         }
 
+        // Tenta pegar o texto diretamente
+        let answer = data.output_text;
+
+        // Caso output_text não exista, procura o texto dentro de output
+        if (!answer && Array.isArray(data.output)) {
+          for (const item of data.output) {
+            if (item.type === "message" && Array.isArray(item.content)) {
+              for (const content of item.content) {
+                if (
+                  content.type === "output_text" &&
+                  typeof content.text === "string"
+                ) {
+                  answer = content.text;
+                  break;
+                }
+              }
+            }
+
+            if (answer) break;
+          }
+        }
+
+        // Se ainda não encontrou texto, devolve informações de diagnóstico
+        if (!answer) {
+          console.error("Resposta completa da OpenAI:", data);
+
+          return new Response(
+            JSON.stringify({
+              error: "A OpenAI respondeu, mas nenhum texto foi encontrado.",
+              raw: data
+            }),
+            {
+              status: 500,
+              headers: {
+                "Content-Type": "application/json",
+                ...corsHeaders
+              }
+            }
+          );
+        }
+
+        // Resposta normal para o Gideon
         return new Response(
           JSON.stringify({
-            response:
-              data.output_text ||
-              "Não consegui gerar uma resposta."
+            response: answer
           }),
           {
             status: 200,
@@ -123,6 +164,8 @@ export default {
         );
 
       } catch (error) {
+        console.error("Erro interno:", error);
+
         return new Response(
           JSON.stringify({
             error: error.message
