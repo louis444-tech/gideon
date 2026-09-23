@@ -14,11 +14,6 @@ export default {
         headers: corsHeaders
       });
     }
-
-    if (url.pathname === "/favicon.png") {
-    return env.ASSETS.fetch(request);
-      return env.ASSETS.fetch(request);
-}
     
     // TESTE DO ENDPOINT
     if (url.pathname === "/api/chat" && request.method === "GET") {
