@@ -83,6 +83,10 @@ export default {
             },
             body: JSON.stringify({
               model: "gpt-5.6",
+
+              instructions:
+                "Você é GIDEON, uma assistente de inteligência artificial criada pelo usuário. Seu nome é GIDEON. Quando perguntarem quem você é, diga que você é a GIDEON. Não diga que você é o ChatGPT. Explique, se necessário, que você utiliza tecnologia da OpenAI como seu núcleo de inteligência. Responda de forma natural, clara e útil.",
+
               input: message
             })
           }
@@ -90,7 +94,7 @@ export default {
 
         const data = await openaiResponse.json();
 
-        // Se a OpenAI retornar erro, mostrar o erro real
+        // ERRO DA OPENAI
         if (!openaiResponse.ok) {
           console.error("Erro da OpenAI:", data);
 
@@ -108,13 +112,17 @@ export default {
           );
         }
 
-        // Tenta pegar o texto diretamente
+        // TENTA PEGAR O TEXTO DIRETAMENTE
         let answer = data.output_text;
 
-        // Caso output_text não exista, procura o texto dentro de output
+        // CASO output_text NÃO EXISTA,
+        // PROCURA O TEXTO DENTRO DE output
         if (!answer && Array.isArray(data.output)) {
           for (const item of data.output) {
-            if (item.type === "message" && Array.isArray(item.content)) {
+            if (
+              item.type === "message" &&
+              Array.isArray(item.content)
+            ) {
               for (const content of item.content) {
                 if (
                   content.type === "output_text" &&
@@ -126,17 +134,23 @@ export default {
               }
             }
 
-            if (answer) break;
+            if (answer) {
+              break;
+            }
           }
         }
 
-        // Se ainda não encontrou texto, devolve informações de diagnóstico
+        // SE NÃO ENCONTRAR TEXTO
         if (!answer) {
-          console.error("Resposta completa da OpenAI:", data);
+          console.error(
+            "Resposta completa da OpenAI:",
+            data
+          );
 
           return new Response(
             JSON.stringify({
-              error: "A OpenAI respondeu, mas nenhum texto foi encontrado.",
+              error:
+                "A OpenAI respondeu, mas nenhum texto foi encontrado.",
               raw: data
             }),
             {
@@ -149,7 +163,7 @@ export default {
           );
         }
 
-        // Resposta normal para o Gideon
+        // RESPOSTA NORMAL PARA O GIDEON
         return new Response(
           JSON.stringify({
             response: answer
