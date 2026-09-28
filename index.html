@@ -1,3 +1,6 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -208,6 +211,7 @@ body {
     height: 100%;
     background: #00eaff;
     box-shadow: 0 0 8px #00eaff;
+    transition: width .5s ease;
 }
 
 .clock {
@@ -252,6 +256,7 @@ body {
         opacity: 0;
         transform: translateY(8px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -282,6 +287,7 @@ body {
     padding: 12px 15px;
     border-left: 2px solid #00d9e8;
     background: rgba(0, 240, 255, .035);
+    white-space: pre-line;
 }
 
 .message.user .message-text {
@@ -455,33 +461,45 @@ button {
             <div class="metric">
                 <div class="metric-label">
                     <span>CORE</span>
-                    <span>98%</span>
+                    <span id="coreValue">98%</span>
                 </div>
 
                 <div class="metric-bar">
-                    <div class="metric-fill" style="width:98%"></div>
+                    <div
+                        class="metric-fill"
+                        id="coreBar"
+                        style="width:98%"
+                    ></div>
                 </div>
             </div>
 
             <div class="metric">
                 <div class="metric-label">
                     <span>MEMORY</span>
-                    <span>76%</span>
+                    <span id="memoryValue">N/D</span>
                 </div>
 
                 <div class="metric-bar">
-                    <div class="metric-fill" style="width:76%"></div>
+                    <div
+                        class="metric-fill"
+                        id="memoryBar"
+                        style="width:0%"
+                    ></div>
                 </div>
             </div>
 
             <div class="metric">
                 <div class="metric-label">
                     <span>NETWORK</span>
-                    <span>100%</span>
+                    <span id="networkValue">---</span>
                 </div>
 
                 <div class="metric-bar">
-                    <div class="metric-fill" style="width:100%"></div>
+                    <div
+                        class="metric-fill"
+                        id="networkBar"
+                        style="width:0%"
+                    ></div>
                 </div>
             </div>
 
@@ -606,15 +624,394 @@ updateClock();
 
 
 /* =====================================
+   DIAGNÓSTICO LOCAL
+   IMPORTANTE:
+   SOMENTE INFORMAÇÕES TÉCNICAS
+   EXPOSTAS PELO NAVEGADOR.
+   
+   NÃO HÁ ACESSO A:
+   - ARQUIVOS
+   - PASTAS
+   - FOTOS
+   - VÍDEOS
+   - DOCUMENTOS
+   - SENHAS
+   - HISTÓRICO
+   - DESKTOP
+===================================== */
+
+async function getLocalSystemInfo() {
+
+    const info = {
+        battery: null,
+        online: navigator.onLine,
+        connection: null,
+        cpu: navigator.hardwareConcurrency || null,
+        memory: navigator.deviceMemory || null,
+        screenWidth: window.screen.width,
+        screenHeight: window.screen.height,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+        pixelRatio: window.devicePixelRatio || 1,
+        theme: window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "escuro"
+            : "claro",
+        language: navigator.language || "N/D",
+        languages: navigator.languages || [],
+        platform: navigator.platform || "N/D",
+        touchPoints: navigator.maxTouchPoints || 0
+    };
+
+
+    /* BATERIA */
+
+    try {
+
+        if ("getBattery" in navigator) {
+
+            const battery =
+                await navigator.getBattery();
+
+            info.battery = {
+                level: Math.round(battery.level * 100),
+                charging: battery.charging
+            };
+
+        }
+
+    } catch (error) {
+
+        console.log(
+            "Informação de bateria indisponível."
+        );
+
+    }
+
+
+    /* CONEXÃO */
+
+    try {
+
+        const connection =
+            navigator.connection ||
+            navigator.mozConnection ||
+            navigator.webkitConnection;
+
+        if (connection) {
+
+            info.connection = {
+                type: connection.type || null,
+                effectiveType:
+                    connection.effectiveType || null,
+                downlink:
+                    typeof connection.downlink === "number"
+                        ? connection.downlink
+                        : null,
+                rtt:
+                    typeof connection.rtt === "number"
+                        ? connection.rtt
+                        : null,
+                saveData:
+                    connection.saveData === true
+            };
+
+        }
+
+    } catch (error) {
+
+        console.log(
+            "Informações avançadas de rede indisponíveis."
+        );
+
+    }
+
+    return info;
+}
+
+
+/* =====================================
+   FORMATAÇÃO DO DIAGNÓSTICO
+===================================== */
+
+async function getSystemReport() {
+
+    const info =
+        await getLocalSystemInfo();
+
+    let report =
+        "DIAGNÓSTICO LOCAL\n\n";
+
+
+    /* BATERIA */
+
+    if (info.battery) {
+
+        report +=
+            `🔋 Bateria: ${info.battery.level}%`;
+
+        if (info.battery.charging) {
+
+            report +=
+                " · carregando";
+
+        } else {
+
+            report +=
+                " · não carregando";
+
+        }
+
+        report += "\n";
+
+    } else {
+
+        report +=
+            "🔋 Bateria: informação não disponível neste navegador.\n";
+
+    }
+
+
+    /* INTERNET */
+
+    report +=
+        `🌐 Internet: ${
+            info.online
+                ? "ONLINE"
+                : "OFFLINE"
+        }\n`;
+
+
+    /* REDE */
+
+    if (info.connection) {
+
+        if (info.connection.effectiveType) {
+
+            report +=
+                `📡 Tipo de conexão: ${info.connection.effectiveType.toUpperCase()}\n`;
+
+        }
+
+        if (
+            typeof info.connection.downlink ===
+            "number"
+        ) {
+
+            report +=
+                `⬇️ Velocidade estimada: ${info.connection.downlink} Mbps\n`;
+
+        }
+
+        if (
+            typeof info.connection.rtt ===
+            "number"
+        ) {
+
+            report +=
+                `📶 Latência estimada: ${info.connection.rtt} ms\n`;
+
+        }
+
+    }
+
+
+    /* CPU */
+
+    if (info.cpu) {
+
+        report +=
+            `🧠 Processadores lógicos: ${info.cpu}\n`;
+
+    } else {
+
+        report +=
+            "🧠 Processadores lógicos: N/D\n";
+
+    }
+
+
+    /* MEMÓRIA */
+
+    if (info.memory) {
+
+        report +=
+            `💾 Memória disponível ao navegador: aproximadamente ${info.memory} GB\n`;
+
+    } else {
+
+        report +=
+            "💾 Memória: informação não disponível neste navegador.\n";
+
+    }
+
+
+    /* TELA */
+
+    report +=
+        `🖥️ Tela: ${info.screenWidth} × ${info.screenHeight}\n`;
+
+    report +=
+        `📐 Janela: ${info.viewportWidth} × ${info.viewportHeight}\n`;
+
+    report +=
+        `🔍 Pixel ratio: ${info.pixelRatio}\n`;
+
+
+    /* TEMA */
+
+    report +=
+        `🌙 Tema do navegador/sistema: ${info.theme.toUpperCase()}\n`;
+
+
+    /* IDIOMA */
+
+    report +=
+        `🌎 Idioma: ${info.language}\n`;
+
+
+    /* PLATAFORMA */
+
+    report +=
+        `💻 Plataforma informada pelo navegador: ${info.platform}\n`;
+
+
+    /* TOUCH */
+
+    report +=
+        `👆 Pontos de toque suportados: ${info.touchPoints}\n`;
+
+
+    report +=
+        "\n⚡ Status geral: " +
+        (info.online
+            ? "OPERACIONAL"
+            : "SEM CONEXÃO");
+
+
+    return report;
+}
+
+
+/* =====================================
+   ATUALIZAR PAINEL LATERAL
+===================================== */
+
+async function updateSystemPanel() {
+
+    const info =
+        await getLocalSystemInfo();
+
+
+    /* NETWORK */
+
+    const networkValue =
+        document.getElementById("networkValue");
+
+    const networkBar =
+        document.getElementById("networkBar");
+
+    if (info.online) {
+
+        networkValue.textContent =
+            "ONLINE";
+
+        networkBar.style.width =
+            "100%";
+
+    } else {
+
+        networkValue.textContent =
+            "OFFLINE";
+
+        networkBar.style.width =
+            "0%";
+    }
+
+
+    /* MEMORY */
+
+    const memoryValue =
+        document.getElementById("memoryValue");
+
+    const memoryBar =
+        document.getElementById("memoryBar");
+
+    if (info.memory) {
+
+        /*
+         * deviceMemory informa uma estimativa
+         * da memória RAM disponível para o
+         * navegador.
+         *
+         * Não é uso real de RAM.
+         */
+
+        memoryValue.textContent =
+            `${info.memory}GB`;
+
+        /*
+         * Apenas representação visual.
+         * Não significa porcentagem de uso.
+         */
+
+        const memoryScale =
+            Math.min(
+                (info.memory / 32) * 100,
+                100
+            );
+
+        memoryBar.style.width =
+            `${memoryScale}%`;
+
+    } else {
+
+        memoryValue.textContent =
+            "N/D";
+
+        memoryBar.style.width =
+            "0%";
+    }
+}
+
+
+updateSystemPanel();
+
+setInterval(
+    updateSystemPanel,
+    10000
+);
+
+
+/* Atualização quando a internet muda */
+
+window.addEventListener(
+    "online",
+    updateSystemPanel
+);
+
+window.addEventListener(
+    "offline",
+    updateSystemPanel
+);
+
+
+/* =====================================
    ADICIONAR MENSAGEM
 ===================================== */
 
-function addMessage(sender, text, user = false) {
+function addMessage(
+    sender,
+    text,
+    user = false
+) {
 
-    const message = document.createElement("div");
+    const message =
+        document.createElement("div");
 
     message.className =
-        "message" + (user ? " user" : "");
+        "message" +
+        (user ? " user" : "");
 
     message.innerHTML = `
         <div class="sender">${sender}</div>
@@ -623,7 +1020,8 @@ function addMessage(sender, text, user = false) {
 
     messages.appendChild(message);
 
-    messages.scrollTop = messages.scrollHeight;
+    messages.scrollTop =
+        messages.scrollHeight;
 }
 
 
@@ -633,9 +1031,11 @@ function addMessage(sender, text, user = false) {
 
 function escapeHTML(text) {
 
-    const div = document.createElement("div");
+    const div =
+        document.createElement("div");
 
-    div.textContent = text;
+    div.textContent =
+        text;
 
     return div.innerHTML;
 }
@@ -660,7 +1060,9 @@ function speak(text) {
     utterance.pitch = 0.85;
     utterance.volume = 1;
 
-    window.speechSynthesis.speak(utterance);
+    window.speechSynthesis.speak(
+        utterance
+    );
 }
 
 
@@ -668,12 +1070,15 @@ function speak(text) {
    PROCESSAMENTO
 ===================================== */
 
-function processCommand(command) {
+async function processCommand(command) {
 
     const text = command
         .toLowerCase()
         .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
+        .replace(
+            /[\u0300-\u036f]/g,
+            ""
+        );
 
 
     /* SAUDAÇÕES */
@@ -720,31 +1125,242 @@ function processCommand(command) {
         text === "data"
     ) {
 
-        return `Hoje é ${new Date().toLocaleDateString("pt-BR", {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            year: "numeric"
-        })}.`;
+        return `Hoje é ${new Date().toLocaleDateString(
+            "pt-BR",
+            {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric"
+            }
+        )}.`;
     }
 
 
-    /* STATUS */
+    /* =====================================
+       DIAGNÓSTICO DO COMPUTADOR
+    ===================================== */
 
     if (
-        text.includes("status") ||
+        text.includes("informacoes do computador") ||
+        text.includes("informacoes do sistema") ||
+        text.includes("informacoes do dispositivo") ||
+        text.includes("diagnostico") ||
+        text.includes("diagnostico local") ||
+        text.includes("como esta meu computador") ||
+        text.includes("como esta o computador") ||
+        text.includes("como esta meu sistema") ||
+        text.includes("status do computador") ||
+        text.includes("status do sistema")
+    ) {
+
+        return await getSystemReport();
+    }
+
+
+    /* =====================================
+       BATERIA
+    ===================================== */
+
+    if (
+        text.includes("bateria") ||
+        text.includes("quanto de bateria")
+    ) {
+
+        const info =
+            await getLocalSystemInfo();
+
+        if (!info.battery) {
+
+            return "A API de bateria não está disponível neste navegador.";
+
+        }
+
+        return (
+            `Bateria em ${info.battery.level} por cento. ` +
+            (
+                info.battery.charging
+                    ? "O dispositivo está carregando."
+                    : "O dispositivo não está carregando."
+            )
+        );
+    }
+
+
+    /* =====================================
+       INTERNET
+    ===================================== */
+
+    if (
+        text.includes("estou conectado") ||
+        text.includes("estou online") ||
+        text.includes("internet") ||
+        text.includes("conexao") ||
+        text.includes("conexão")
+    ) {
+
+        const info =
+            await getLocalSystemInfo();
+
+        if (info.online) {
+
+            let answer =
+                "Sim. O navegador informa que este dispositivo está conectado à internet.";
+
+            if (
+                info.connection &&
+                info.connection.effectiveType
+            ) {
+
+                answer +=
+                    ` Tipo de conexão estimado: ${info.connection.effectiveType.toUpperCase()}.`;
+            }
+
+            return answer;
+
+        }
+
+        return "O navegador informa que este dispositivo está offline.";
+    }
+
+
+    /* =====================================
+       CPU
+    ===================================== */
+
+    if (
+        text.includes("processador") ||
+        text.includes("processadores") ||
+        text.includes("cpu")
+    ) {
+
+        const info =
+            await getLocalSystemInfo();
+
+        if (!info.cpu) {
+
+            return "O navegador não disponibilizou a quantidade de processadores lógicos.";
+
+        }
+
+        return `O navegador informa ${info.cpu} processadores lógicos disponíveis para esta página.`;
+    }
+
+
+    /* =====================================
+       MEMÓRIA
+    ===================================== */
+
+    if (
+        text.includes("memoria") ||
+        text.includes("memória") ||
+        text.includes("ram")
+    ) {
+
+        const info =
+            await getLocalSystemInfo();
+
+        if (!info.memory) {
+
+            return "A estimativa de memória do dispositivo não está disponível neste navegador.";
+
+        }
+
+        return `O navegador disponibilizou uma estimativa de aproximadamente ${info.memory} GB de memória para este dispositivo. Isso é uma estimativa, não o uso atual de RAM.`;
+    }
+
+
+    /* =====================================
+       TELA
+    ===================================== */
+
+    if (
+        text.includes("resolucao") ||
+        text.includes("resolução") ||
+        text.includes("tela") ||
+        text.includes("monitor")
+    ) {
+
+        const info =
+            await getLocalSystemInfo();
+
+        return (
+            `A resolução informada pela tela é ` +
+            `${info.screenWidth} por ${info.screenHeight} pixels. ` +
+            `A janela atual está em ` +
+            `${info.viewportWidth} por ${info.viewportHeight} pixels.`
+        );
+    }
+
+
+    /* =====================================
+       TEMA
+    ===================================== */
+
+    if (
+        text.includes("tema") ||
+        text.includes("modo escuro") ||
+        text.includes("modo claro")
+    ) {
+
+        const info =
+            await getLocalSystemInfo();
+
+        return `O navegador informa preferência pelo tema ${info.theme}.`;
+    }
+
+
+    /* =====================================
+       IDIOMA
+    ===================================== */
+
+    if (
+        text.includes("idioma") ||
+        text.includes("lingua") ||
+        text.includes("língua")
+    ) {
+
+        const info =
+            await getLocalSystemInfo();
+
+        return `O idioma principal informado pelo navegador é ${info.language}.`;
+    }
+
+
+    /* =====================================
+       STATUS
+    ===================================== */
+
+    if (
+        text === "status" ||
+        text.includes("status da gideon") ||
         text.includes("sistemas")
     ) {
 
-        return "Todos os sistemas principais estão operacionais. Núcleo em 98 por cento. Rede estável.";
+        const info =
+            await getLocalSystemInfo();
+
+        return (
+            "Todos os sistemas principais estão operacionais. " +
+            "Núcleo em 98 por cento. " +
+            `Rede: ${info.online ? "online" : "offline"}. ` +
+            "Acesso local limitado a informações técnicas do dispositivo."
+        );
     }
 
 
-    /* GOOGLE */
+    /* =====================================
+       GOOGLE
+    ===================================== */
 
-    if (text.startsWith("pesquise ")) {
+    if (
+        text.startsWith("pesquise ")
+    ) {
 
-        const query = command.substring(9).trim();
+        const query =
+            command
+                .substring(9)
+                .trim();
 
         if (query) {
 
@@ -759,7 +1375,9 @@ function processCommand(command) {
     }
 
 
-    /* YOUTUBE */
+    /* =====================================
+       YOUTUBE
+    ===================================== */
 
     if (
         text.includes("abra o youtube") ||
@@ -775,7 +1393,9 @@ function processCommand(command) {
     }
 
 
-    /* GOOGLE */
+    /* =====================================
+       GOOGLE
+    ===================================== */
 
     if (
         text.includes("abra o google") ||
@@ -791,18 +1411,22 @@ function processCommand(command) {
     }
 
 
-    /* BEYONCÉ 👑 */
+    /* =====================================
+       BEYONCÉ 👑
+    ===================================== */
 
     if (
         text.includes("beyonce") ||
-        text.includes("beyonce")
+        text.includes("beyoncé")
     ) {
 
         return "Beyoncé Giselle Knowles-Carter. Artista, compositora, performer e uma ameaça permanente à estabilidade emocional do planeta.";
     }
 
 
-    /* FLASH */
+    /* =====================================
+       FLASH
+    ===================================== */
 
     if (
         text.includes("flash") ||
@@ -813,7 +1437,9 @@ function processCommand(command) {
     }
 
 
-    /* PIADA */
+    /* =====================================
+       PIADA
+    ===================================== */
 
     if (
         text.includes("conte uma piada") ||
@@ -825,20 +1451,33 @@ function processCommand(command) {
     }
 
 
-    /* AJUDA */
+    /* =====================================
+       AJUDA
+    ===================================== */
 
     if (
         text.includes("ajuda") ||
         text.includes("comandos")
     ) {
 
-        return "Comandos disponíveis: perguntar a hora, perguntar a data, verificar o status, pesquisar algo, abrir o Google, abrir o YouTube, perguntar quem eu sou ou conversar comigo.";
+        return (
+            "Comandos disponíveis: perguntar a hora, " +
+            "perguntar a data, verificar o status, " +
+            "verificar a bateria, verificar a internet, " +
+            "consultar processadores, consultar memória, " +
+            "verificar a resolução da tela, consultar o tema, " +
+            "consultar o idioma, executar um diagnóstico local, " +
+            "pesquisar algo, abrir o Google, abrir o YouTube, " +
+            "perguntar quem eu sou ou conversar comigo."
+        );
     }
 
 
-    /* RESPOSTA PADRÃO */
+    /* =====================================
+       RESPOSTA PADRÃO
+    ===================================== */
 
-    return "Comando recebido. Ainda estou aprendendo a processar esse tipo de solicitação. Minha versão atual possui respostas locais e comandos básicos.";
+    return "Comando recebido. Ainda estou aprendendo a processar esse tipo de solicitação. Minha versão atual possui respostas locais, diagnóstico técnico do dispositivo e comandos básicos.";
 }
 
 
@@ -848,65 +1487,258 @@ function processCommand(command) {
 
 async function sendMessage() {
 
-    const command = input.value.trim();
+    const command =
+        input.value.trim();
 
     if (!command)
         return;
 
-    addMessage("VOCÊ", command, true);
+    addMessage(
+        "VOCÊ",
+        command,
+        true
+    );
 
     input.value = "";
 
-    typing.style.display = "block";
+    typing.style.display =
+        "block";
+
+
+    /*
+     * PRIMEIRO:
+     * verifica comandos locais.
+     *
+     * Isso permite que informações
+     * do dispositivo sejam obtidas
+     * diretamente pelo navegador.
+     */
+
+    const normalized =
+        command
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(
+                /[\u0300-\u036f]/g,
+                ""
+            );
+
+
+    const localCommand =
+        normalized.includes("bateria") ||
+        normalized.includes("internet") ||
+        normalized.includes("conexao") ||
+        normalized.includes("processador") ||
+        normalized.includes("cpu") ||
+        normalized.includes("memoria") ||
+        normalized.includes("ram") ||
+        normalized.includes("resolucao") ||
+        normalized.includes("tela") ||
+        normalized.includes("monitor") ||
+        normalized.includes("diagnostico") ||
+        normalized.includes("informacoes do computador") ||
+        normalized.includes("informacoes do sistema") ||
+        normalized.includes("informacoes do dispositivo") ||
+        normalized.includes("como esta meu computador") ||
+        normalized.includes("como esta o computador") ||
+        normalized.includes("status do computador") ||
+        normalized.includes("status do sistema") ||
+        normalized.includes("tema") ||
+        normalized.includes("idioma") ||
+        normalized.includes("lingua");
+
+
+    /*
+     * Se for comando local,
+     * não precisa enviar ao servidor.
+     */
+
+    if (localCommand) {
+
+        try {
+
+            const answer =
+                await processCommand(
+                    command
+                );
+
+            typing.style.display =
+                "none";
+
+            addMessage(
+                "GIDEON",
+                answer
+            );
+
+            speak(answer);
+
+            return;
+
+        } catch (error) {
+
+            console.error(error);
+
+            typing.style.display =
+                "none";
+
+            const errorMessage =
+                "Não consegui obter os dados técnicos deste dispositivo.";
+
+            addMessage(
+                "GIDEON",
+                errorMessage
+            );
+
+            speak(errorMessage);
+
+            return;
+        }
+    }
+
+
+    /*
+     * COMANDOS LOCAIS SIMPLES
+     *
+     * Hora, data, ajuda etc.
+     */
+
+    const localSimpleCommand =
+        normalized === "hora" ||
+        normalized === "data" ||
+        normalized.includes("que horas") ||
+        normalized.includes("hora atual") ||
+        normalized.includes("que dia") ||
+        normalized.includes("data de hoje") ||
+        normalized.includes("quem e voce") ||
+        normalized.includes("quem e a gideon") ||
+        normalized === "status" ||
+        normalized.includes("status da gideon") ||
+        normalized.includes("ajuda") ||
+        normalized.includes("comandos") ||
+        normalized.includes("ola") ||
+        normalized === "oi" ||
+        normalized === "hello" ||
+        normalized.includes("beyonce") ||
+        normalized.includes("flash") ||
+        normalized.includes("barry allen") ||
+        normalized.includes("piada");
+
+
+    if (localSimpleCommand) {
+
+        try {
+
+            const answer =
+                await processCommand(
+                    command
+                );
+
+            typing.style.display =
+                "none";
+
+            addMessage(
+                "GIDEON",
+                answer
+            );
+
+            speak(answer);
+
+            return;
+
+        } catch (error) {
+
+            console.error(error);
+
+            typing.style.display =
+                "none";
+
+            addMessage(
+                "GIDEON",
+                "Não consegui processar o comando local."
+            );
+
+            return;
+        }
+    }
+
+
+    /* =====================================
+       NÚCLEO DE IA
+    ===================================== */
 
     try {
 
-       const response = await fetch(
-    "/api/chat",
-            {
-                method: "POST",
+        const response =
+            await fetch(
+                "/api/chat",
+                {
+                    method: "POST",
 
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
 
-                body: JSON.stringify({
-                    message: command
-                })
-            }
-        );
+                    body: JSON.stringify({
+                        message: command
+                    })
+                }
+            );
+
 
         if (!response.ok) {
-            throw new Error("Erro ao conectar com o servidor.");
+
+            throw new Error(
+                "Erro ao conectar com o servidor."
+            );
         }
 
-        const data = await response.json();
+
+        const data =
+            await response.json();
+
 
         const answer =
             data.response ||
             data.output ||
             "Não consegui obter uma resposta.";
 
-        typing.style.display = "none";
 
-        addMessage("GIDEON", answer);
+        typing.style.display =
+            "none";
+
+
+        addMessage(
+            "GIDEON",
+            answer
+        );
+
 
         speak(answer);
 
+
     } catch (error) {
 
-        typing.style.display = "none";
+        typing.style.display =
+            "none";
 
         console.error(error);
+
 
         const errorMessage =
             "Não consegui me conectar ao meu núcleo de inteligência.";
 
-        addMessage("GIDEON", errorMessage);
+
+        addMessage(
+            "GIDEON",
+            errorMessage
+        );
+
 
         speak(errorMessage);
     }
 }
+
 
 /* =====================================
    BOTÃO ENVIAR
@@ -950,46 +1782,65 @@ if (SpeechRecognition) {
     recognition =
         new SpeechRecognition();
 
-    recognition.lang = "pt-BR";
+    recognition.lang =
+        "pt-BR";
 
-    recognition.continuous = false;
+    recognition.continuous =
+        false;
 
-    recognition.interimResults = false;
-
-
-    recognition.onstart = () => {
-
-        mic.classList.add("active");
-
-        mic.textContent = "⏹";
-    };
+    recognition.interimResults =
+        false;
 
 
-    recognition.onend = () => {
+    recognition.onstart =
+        () => {
 
-        mic.classList.remove("active");
+            mic.classList.add(
+                "active"
+            );
 
-        mic.textContent = "🎙";
-    };
-
-
-    recognition.onresult = event => {
-
-        const transcript =
-            event.results[0][0].transcript;
-
-        input.value = transcript;
-
-        sendMessage();
-    };
+            mic.textContent =
+                "⏹";
+        };
 
 
-    recognition.onerror = () => {
+    recognition.onend =
+        () => {
 
-        mic.classList.remove("active");
+            mic.classList.remove(
+                "active"
+            );
 
-        mic.textContent = "🎙";
-    };
+            mic.textContent =
+                "🎙";
+        };
+
+
+    recognition.onresult =
+        event => {
+
+            const transcript =
+                event
+                    .results[0][0]
+                    .transcript;
+
+            input.value =
+                transcript;
+
+            sendMessage();
+        };
+
+
+    recognition.onerror =
+        () => {
+
+            mic.classList.remove(
+                "active"
+            );
+
+            mic.textContent =
+                "🎙";
+        };
 
 
     mic.addEventListener(
@@ -1010,7 +1861,8 @@ if (SpeechRecognition) {
 
 } else {
 
-    mic.disabled = true;
+    mic.disabled =
+        true;
 
     mic.title =
         "Reconhecimento de voz não suportado neste navegador";
@@ -1021,13 +1873,23 @@ if (SpeechRecognition) {
    BOAS-VINDAS
 ===================================== */
 
-setTimeout(() => {
+setTimeout(
+    () => {
 
-    speak(
-        "Sistemas online. Olá. Como posso ajudá-lo?"
-    );
+        speak(
+            "Sistemas online. Olá. Como posso ajudá-lo?"
+        );
 
-}, 900);
+    },
+    900
+);
+
+
+/* =====================================
+   PRIMEIRO DIAGNÓSTICO DO PAINEL
+===================================== */
+
+updateSystemPanel();
 
 </script>
 
