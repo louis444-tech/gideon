@@ -14,13 +14,14 @@ export default {
         headers: corsHeaders
       });
     }
-    
+
     // TESTE DO ENDPOINT
     if (url.pathname === "/api/chat" && request.method === "GET") {
       return new Response(
         JSON.stringify({
           status: "online",
-          message: "GIDEON API está funcionando!"
+          message: "GIDEON API está funcionando!",
+          model: "GPT-6.1 Sol"
         }),
         {
           status: 200,
@@ -82,7 +83,11 @@ export default {
               "Authorization": `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-              model: "gpt-5.6",
+              model: "gpt-6.1-sol",
+
+              reasoning: {
+                effort: "medium"
+              },
 
               instructions:
                 "Você é GIDEON, uma assistente de inteligência artificial criada pelo usuário. Seu nome é GIDEON. Quando perguntarem quem você é, diga que você é a GIDEON. Não diga que você é o ChatGPT. Explique, se necessário, que você utiliza tecnologia da OpenAI como seu núcleo de inteligência. Responda de forma natural, clara e útil.",
@@ -166,7 +171,8 @@ export default {
         // RESPOSTA NORMAL PARA O GIDEON
         return new Response(
           JSON.stringify({
-            response: answer
+            response: answer,
+            model: "gpt-6.1-sol"
           }),
           {
             status: 200,
